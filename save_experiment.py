@@ -92,6 +92,23 @@ def files_in_recursive_subdirs(mainfold, filetypes):
 
 def experiment_info_save(zip_output_path, file_types_to_zip=default_filetypes, directory=default_directory):
     assert zip_output_path.endswith('.zip'), zip_output_path
+    if os.path.isfile(zip_output_path):
+        newbasename = None
+        if '-' in zip_output_path[-20:]:
+            maybeint = zip_output_path[zip_output_path.rfind('-')+1:-4]
+            try:
+                maybeint = int(maybeint)
+            except ValueError:
+                maybeint = None
+            if maybeint is not None:
+                newbasename = zip_output_path[:zip_output_path.rfind('-')]
+        if newbasename is None:
+            newbasename = zip_output_path[:-4]
+        suffix_int = 0
+        while os.path.isfile(zip_output_path):
+            zip_output_path = newbasename+'-'+str(suffix_int)+'.zip'
+            suffix_int += 1
+
     zipfs = files_in_recursive_subdirs(directory, filetypes=file_types_to_zip)
 
     # files meta should be sorted by timestamp (most recently modified at top)
@@ -122,7 +139,7 @@ def experiment_info_save(zip_output_path, file_types_to_zip=default_filetypes, d
     subprocess.check_output(zargs, cwd=directory)
     if deterministic_zip:
         subprocess.check_output(['strip-nondeterminism', '-t', 'zip', zip_output_path])
-    return md5_of(zip_output_path)
+    return zip_output_path, md5_of(zip_output_path)
 
 
 if __name__ == '__main__':
@@ -133,6 +150,6 @@ if __name__ == '__main__':
         print("usage:  {input-path}  {zip-output-path}")
         quit()
 
-    themd5 = experiment_info_save(zoutpath, directory=inputpath)
+    zoutpath, themd5 = experiment_info_save(zoutpath, directory=inputpath)
     print("saved \'"+os.path.basename(zoutpath)+"\' with md5 "+str(themd5))
 
