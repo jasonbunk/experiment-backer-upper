@@ -92,7 +92,9 @@ def files_in_recursive_subdirs(mainfold, filetypes):
 
 def experiment_info_save(zip_output_path, file_types_to_zip=default_filetypes, directory=default_directory):
     assert zip_output_path.endswith('.zip'), zip_output_path
-    if os.path.isfile(zip_output_path):
+    if not os.path.isdir(os.path.dirname(zip_output_path)):
+        subprocess.call(['mkdir', '-p', os.path.dirname(zip_output_path)])
+    elif os.path.isfile(zip_output_path):
         newbasename = None
         if '-' in zip_output_path[-20:]:
             maybeint = zip_output_path[zip_output_path.rfind('-')+1:-4]
@@ -123,14 +125,17 @@ def experiment_info_save(zip_output_path, file_types_to_zip=default_filetypes, d
         outfile.write(figure_out_equal_spacing(printm))
         # also save git info
         try:
-            cout_log    = subprocess.check_output(['git','log','-1'],cwd=directory)+'\n'
+            cout_log    = subprocess.check_output(['git','log','-1'],cwd=directory)
         except subprocess.CalledProcessError:
             cout_log    = ''
         try:
             cout_status = subprocess.check_output(['git','status'],cwd=directory)
         except subprocess.CalledProcessError:
             cout_status = ''
-        outfile.write('\n---------- git log -------------\n'+bytes2string(cout_log)
+        cout_log = bytes2string(cout_log)
+        if len(cout_log) > 1:
+            cout_log += '\n'
+        outfile.write('\n---------- git log -------------\n'+cout_log
                        +'---------- git status ----------\n'+bytes2string(cout_status))
 
     # files passed to zip should be sorted by filename (deterministic)
