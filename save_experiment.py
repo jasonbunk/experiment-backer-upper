@@ -10,7 +10,9 @@ from datetime import datetime
 #
 # Optional: ssdeep fuzzy hashing
 #     sudo apt install ssdeep
-# Optional: the zip can be deterministically hashed, for reproduceability
+# Optional: the zip can be deterministically hashed, for reproduceability.
+#           Otherwise, the exact same code on two different machines
+#           will produce two different zip hashes unless you strip nondeterminism
 #     sudo apt install strip-nondeterminism
 #------------------------------------------------------------------------
 

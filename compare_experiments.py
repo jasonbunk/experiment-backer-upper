@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 import os,sys
 
+#------------------------------------------------------------------------
+# TODO: if there are differences, optionally unzip the associated zips
+#       and launch a nicer comparator like Meld
+#------------------------------------------------------------------------
+
 def _editdist_ssdeep(h1,h2):
     import editdistance
     return 1. - float(editdistance.eval(h1,h2)) \
