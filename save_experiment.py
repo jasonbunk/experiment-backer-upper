@@ -29,12 +29,14 @@ else:
     devnull = open(os.devnull,'rb')
 
 def md5_of(fpath):
+    assert os.path.isfile(fpath), fpath
     hasher = hashlib.md5()
     with open(fpath, 'rb') as f:
         for chunk in iter(lambda: f.read(65536), b''):
             hasher.update(chunk)
     return hasher.hexdigest()
 def ssdeep_of(fpath):
+    assert os.path.isfile(fpath), fpath
     ret = subprocess.check_output(['ssdeep',fpath],stderr=devnull).decode('ascii').split('\n')
     return ret[1][:ret[1].rfind(',\"')] # remove filename, we already save ourselves
 
@@ -74,6 +76,7 @@ def figure_out_equal_spacing(list_of_entries_to_print):
 def files_in_recursive_subdirs(mainfold, filetypes):
     assert os.path.isdir(mainfold)
     mainfold = os.path.abspath(mainfold)
+    assert os.path.isdir(mainfold)
     allret = []
     for root,dirs,filens in os.walk(mainfold):
         assert root.startswith(mainfold), root+'\n'+mainfold
@@ -82,11 +85,13 @@ def files_in_recursive_subdirs(mainfold, filetypes):
             root = root[1:]
         for filen in filens:
             if any(filen.endswith(ft) for ft in filetypes):
-                fpath = os.path.join(root,filen)
-                allret.append((fpath,
-                               int(round(os.path.getmtime(fpath))),
-                               int(os.path.getsize(fpath)),
-                               globals()[default_hasher+'_of'](fpath)))
+                _abspath = os.path.join(mainfold,root,filen)
+                _relpath = os.path.join(root,filen)
+                assert os.path.isfile(_abspath), _abspath
+                allret.append((_relpath,
+                               int(round(os.path.getmtime(_abspath))),
+                               int(os.path.getsize(_abspath)),
+                               globals()[default_hasher+'_of'](_abspath)))
     return allret
 
 
@@ -140,8 +145,9 @@ def experiment_info_save(zip_output_path, file_types_to_zip=default_filetypes, d
 
     # files passed to zip should be sorted by filename (deterministic)
     fnames = list(sorted([tup[0] for tup in zipfs]))
-    zargs = ['zip', '-X', '-R', zip_output_path[:-4]] + fnames
+    zargs = ['zip', '-X', '-R', zip_output_path] + fnames
     subprocess.check_output(zargs, cwd=directory)
+    assert os.path.isfile(zip_output_path), zip_output_path
     if deterministic_zip:
         subprocess.check_output(['strip-nondeterminism', '-t', 'zip', zip_output_path])
     return zip_output_path, md5_of(zip_output_path)
@@ -150,11 +156,14 @@ def experiment_info_save(zip_output_path, file_types_to_zip=default_filetypes, d
 if __name__ == '__main__':
     try:
         inputpath = sys.argv[1]
-        zoutpath  = sys.argv[2]
     except:
         print("usage:  {input-path}  {zip-output-path}")
         quit()
+    inputpath = os.path.abspath(inputpath)
+    if len(sys.argv) > 2:
+        zoutpath  = sys.argv[2]
+    else:
+        zoutpath = os.path.join(os.path.dirname(inputpath),os.path.basename(inputpath)+'_codebackup_'+datetime.now().isoformat()+'.zip')
 
     zoutpath, themd5 = experiment_info_save(zoutpath, directory=inputpath)
     print("saved \'"+os.path.basename(zoutpath)+"\' with md5 "+str(themd5))
-
